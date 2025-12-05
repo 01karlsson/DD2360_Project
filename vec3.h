@@ -4,8 +4,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <iostream>
-
-#define dataType float
+#include <cuda_fp16.h>
+#define dataType __half
 
 class vec3  {
 
@@ -32,10 +32,11 @@ public:
     __host__ __device__ inline vec3& operator*=(const dataType t);
     __host__ __device__ inline vec3& operator/=(const dataType t);
 
-    __host__ __device__ inline dataType length() const { return sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
+    __host__ inline dataType length() const { return sqrt(__half2float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2])); }
+    __device__ inline dataType lengthd() const { return hsqrt(__hadd(__hadd(__hmul(e[0],e[0]) , __hmul(e[1],e[1])) , __hmul(e[2],e[2]))); }
     __host__ __device__ inline dataType squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
-    __host__ __device__ inline void make_unit_vector();
-
+    __host__  inline void make_unit_vectorh();
+    __device__  inline void make_unit_vectord();
 
     dataType e[3];
 };
@@ -43,20 +44,29 @@ public:
 
 
 inline std::istream& operator>>(std::istream &is, vec3 &t) {
-    is >> t.e[0] >> t.e[1] >> t.e[2];
+    float x, y, z;
+    is >> x >> y >> z;
+    t.e[0] = __float2half(x);
+    t.e[1] = __float2half(y);
+    t.e[2] = __float2half(z);
     return is;
 }
 
 inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
-    os << t.e[0] << " " << t.e[1] << " " << t.e[2];
+    os << __half2float(t.e[0]) << " "
+       << __half2float(t.e[1]) << " "
+       << __half2float(t.e[2]);
     return os;
 }
 
-__host__ __device__ inline void vec3::make_unit_vector() {
-    float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
+__device__ inline void vec3::make_unit_vectord() {
+    dataType k = hrsqrt(__hfma(e[0],e[0],__hfma(e[1],e[1],__hmul(e[2],e[2]))));
+    e[0] = __hmul(e[0],k); e[1] = __hmul(e[1],k); e[2] = __hmul(e[2],k);
+}
+__host__ inline void vec3::make_unit_vectorh() {
+    dataType k = 1.0 / sqrt(__half2float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]));
     e[0] *= k; e[1] *= k; e[2] *= k;
 }
-
 __host__ __device__ inline vec3 operator+(const vec3 &v1, const vec3 &v2) {
     return vec3(v1.e[0] + v2.e[0], v1.e[1] + v2.e[1], v1.e[2] + v2.e[2]);
 }
