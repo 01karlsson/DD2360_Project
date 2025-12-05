@@ -28,7 +28,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 // depth of 50, so we adapt this a few chapters early on the GPU.
 __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_state) {
     ray cur_ray = r;
-    vec3 cur_attenuation = vec3(1.0,1.0,1.0);
+    vec3 cur_attenuation = vec3(1.0f, 1.0f, 1.0f);
     for(int i = 0; i < 50; i++) {
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
@@ -39,17 +39,17 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
                 cur_ray = scattered;
             }
             else {
-                return vec3(0.0,0.0,0.0);
+                return vec3(0.0f, 0.0f, 0.0f);
             }
         }
         else {
-            vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f*(unit_direction.y() + 1.0f);
-            vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            vec3 unit_direction = unit_vectord(cur_ray.direction());
+            __half t = 0.5f * (unit_direction.y() + __float2half(1.0f));
+            vec3 c = (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
             return cur_attenuation * c;
         }
     }
-    return vec3(0.0,0.0,0.0); // exceeded recursion
+    return vec3(0.0f, 0.0f, 0.0f); // exceeded recursion
 }
 
 __global__ void rand_init(curandState *rand_state) {
@@ -63,10 +63,6 @@ __global__ void render_init(int max_x, int max_y, curandState *rand_state) {
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j*max_x + i;
-    // Original: Each thread gets same seed, a different sequence number, no offset
-    // curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
-    // BUGFIX, see Issue#2: Each thread gets different seed, same sequence for
-    // performance improvement of about 2x!
     curand_init(1984+pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
@@ -76,7 +72,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     if((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j*max_x + i;
     curandState local_rand_state = rand_state[pixel_index];
-    vec3 col(0,0,0);
+    vec3 col(0.0f, 0.0f, 0.0f);
     for(int s=0; s < ns; s++) {
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
@@ -85,9 +81,10 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     }
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    col[0] = sqrt(col[0]);
-    col[1] = sqrt(col[1]);
-    col[2] = sqrt(col[2]);
+    // Gamma correction with sqrt
+    col[0] = hsqrt_wrapper(col[0]);
+    col[1] = hsqrt_wrapper(col[1]);
+    col[2] = hsqrt_wrapper(col[2]);
     fb[pixel_index] = col;
 }
 
@@ -96,43 +93,43 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
-        d_list[0] = new sphere(vec3(0,-1000.0,-1), 1000,
-                               new lambertian(vec3(0.5, 0.5, 0.5)));
+        d_list[0] = new sphere(vec3(0.0f, -1000.0f, -1.0f), 1000.0f,
+                               new lambertian(vec3(0.5f, 0.5f, 0.5f)));
         int i = 1;
         for(int a = -11; a < 11; a++) {
             for(int b = -11; b < 11; b++) {
                 float choose_mat = RND;
-                vec3 center(a+RND,0.2,b+RND);
+                vec3 center(a + RND, 0.2f, b + RND);
                 if(choose_mat < 0.8f) {
-                    d_list[i++] = new sphere(center, 0.2,
+                    d_list[i++] = new sphere(center, 0.2f,
                                              new lambertian(vec3(RND*RND, RND*RND, RND*RND)));
                 }
                 else if(choose_mat < 0.95f) {
-                    d_list[i++] = new sphere(center, 0.2,
+                    d_list[i++] = new sphere(center, 0.2f,
                                              new metal(vec3(0.5f*(1.0f+RND), 0.5f*(1.0f+RND), 0.5f*(1.0f+RND)), 0.5f*RND));
                 }
                 else {
-                    d_list[i++] = new sphere(center, 0.2, new dielectric(1.5));
+                    d_list[i++] = new sphere(center, 0.2f, new dielectric(1.5f));
                 }
             }
         }
-        d_list[i++] = new sphere(vec3(0, 1,0),  1.0, new dielectric(1.5));
-        d_list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
-        d_list[i++] = new sphere(vec3(4, 1, 0),  1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        d_list[i++] = new sphere(vec3(0.0f, 1.0f, 0.0f), 1.0f, new dielectric(1.5f));
+        d_list[i++] = new sphere(vec3(-4.0f, 1.0f, 0.0f), 1.0f, new lambertian(vec3(0.4f, 0.2f, 0.1f)));
+        d_list[i++] = new sphere(vec3(4.0f, 1.0f, 0.0f), 1.0f, new metal(vec3(0.7f, 0.6f, 0.5f), 0.0f));
         *rand_state = local_rand_state;
         *d_world  = new hitable_list(d_list, 22*22+1+3);
 
-        vec3 lookfrom(13,2,3);
-        vec3 lookat(0,0,0);
-        float dist_to_focus = 10.0; (lookfrom-lookat).length();
-        float aperture = 0.1;
-        *d_camera   = new camera(lookfrom,
-                                 lookat,
-                                 vec3(0,1,0),
-                                 30.0,
-                                 float(nx)/float(ny),
-                                 aperture,
-                                 dist_to_focus);
+        vec3 lookfrom(13.0f, 2.0f, 3.0f);
+        vec3 lookat(0.0f, 0.0f, 0.0f);
+        float dist_to_focus = 10.0f;
+        float aperture = 0.1f;
+        *d_camera = new camera(lookfrom,
+                               lookat,
+                               vec3(0.0f, 1.0f, 0.0f),
+                               30.0f,
+                               float(nx)/float(ny),
+                               aperture,
+                               dist_to_focus);
     }
 }
 
@@ -152,7 +149,7 @@ int main(int argc, char *argv[]) {
       nx = atoi(argv[1]);
       ny = atoi(argv[2]);
     }
-    
+
     int ns = 10;
     int tx = 8;
     int ty = 8;
@@ -210,9 +207,9 @@ int main(int argc, char *argv[]) {
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j*nx + i;
-            int ir = int(255.99*fb[pixel_index].r());
-            int ig = int(255.99*fb[pixel_index].g());
-            int ib = int(255.99*fb[pixel_index].b());
+            int ir = int(255.99f * __half2float(fb[pixel_index].r()));
+            int ig = int(255.99f * __half2float(fb[pixel_index].g()));
+            int ib = int(255.99f * __half2float(fb[pixel_index].b()));
             std::cout << ir << " " << ig << " " << ib << "\n";
         }
     }
