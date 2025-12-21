@@ -11,7 +11,9 @@
 __device__ vec3 random_in_unit_disk(curandState *local_rand_state) {
     vec3 p;
     do {
-        p = 2.0f*vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),0) - vec3(1,1,0);
+        float r1 = curand_uniform(local_rand_state);
+        float r2 = curand_uniform(local_rand_state);
+        p = 2.0f*vec3(r1, r2, 0.0f) - vec3(1.0f, 1.0f, 0.0f);
     } while (dot(p,p) >= 1.0f);
     return p;
 }

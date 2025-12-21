@@ -8,6 +8,7 @@
 #include "hitable_list.h"
 #include "camera.h"
 #include "material.h"
+#include <cuda_fp16.h>
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
@@ -28,7 +29,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 // depth of 50, so we adapt this a few chapters early on the GPU.
 __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_state) {
     ray cur_ray = r;
-    vec3 cur_attenuation = vec3(1.0,1.0,1.0);
+    vec3 cur_attenuation = vec3(1.0f,1.0f,1.0f);
     for(int i = 0; i < 50; i++) {
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
@@ -39,17 +40,18 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
                 cur_ray = scattered;
             }
             else {
-                return vec3(0.0,0.0,0.0);
+                return vec3(0.0f,0.0f,0.0f);
             }
         }
         else {
             vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f*(unit_direction.y() + 1.0f);
-            vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            __half uy = unit_direction.y();
+            float t = 0.5f*(__half2float(uy) + 1.0f);
+            vec3 c = (1.0f-t)*vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
             return cur_attenuation * c;
         }
     }
-    return vec3(0.0,0.0,0.0); // exceeded recursion
+    return vec3(0.0f,0.0f,0.0f); // exceeded recursion
 }
 
 __global__ void rand_init(curandState *rand_state) {
@@ -76,18 +78,25 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     if((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j*max_x + i;
     curandState local_rand_state = rand_state[pixel_index];
-    vec3 col(0,0,0);
+    
+    vec3 col(0.0f,0.0f,0.0f);
     for(int s=0; s < ns; s++) {
-        float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
-        float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
+        float rand_u = curand_uniform(&local_rand_state);
+        float rand_v = curand_uniform(&local_rand_state);
+        float u = (float(i) + rand_u) / float(max_x);
+        float v = (float(j) + rand_v) / float(max_y);
         ray r = (*cam)->get_ray(u, v, &local_rand_state);
         col += color(r, world, &local_rand_state);
     }
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    col[0] = sqrt(col[0]);
-    col[1] = sqrt(col[1]);
-    col[2] = sqrt(col[2]);
+    // Convert to float for sqrt
+    float col_r = __half2float(col[0]);
+    float col_g = __half2float(col[1]);
+    float col_b = __half2float(col[2]);
+    col[0] = __float2half(sqrtf(col_r));
+    col[1] = __float2half(sqrtf(col_g));
+    col[2] = __float2half(sqrtf(col_b));
     fb[pixel_index] = col;
 }
 
@@ -210,9 +219,9 @@ int main(int argc, char *argv[]) {
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j*nx + i;
-            int ir = int(255.99*fb[pixel_index].r());
-            int ig = int(255.99*fb[pixel_index].g());
-            int ib = int(255.99*fb[pixel_index].b());
+            int ir = int(255.99f*__half2float(fb[pixel_index].r()));
+            int ig = int(255.99f*__half2float(fb[pixel_index].g()));
+            int ib = int(255.99f*__half2float(fb[pixel_index].b()));
             std::cout << ir << " " << ig << " " << ib << "\n";
         }
     }
