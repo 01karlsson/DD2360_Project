@@ -111,15 +111,9 @@ __global__ void render(uint8_t *fb, int max_x, int max_y, int ns, camera **cam, 
     //printf("Direction: %0.2f \n", r.direction().x());
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    col[0] = sqrt(col[0]);
-    col[1] = sqrt(col[1]);
-    col[2] = sqrt(col[2]);
-    uint8_t red     = uint8_t(255.99*col[0]);
-    uint8_t green   = uint8_t(255.99*col[1]);
-    uint8_t blue    = uint8_t(255.99*col[2]);
-    fb[pixel_index*3]   = red;
-    fb[pixel_index*3+1] = green;
-    fb[pixel_index*3+2] = blue;
+    fb[pixel_index*3]   = uint8_t(255.99*col[0]*rsqrtf(col[0]));
+    fb[pixel_index*3+1] = uint8_t(255.99*col[1]*rsqrtf(col[1]));
+    fb[pixel_index*3+2] = uint8_t(255.99*col[2]*rsqrtf(col[2]));
 }
 
 #define RND (curand_uniform(&local_rand_state))
