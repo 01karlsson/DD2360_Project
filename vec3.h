@@ -43,56 +43,100 @@ public:
 
 
 inline std::istream& operator>>(std::istream &is, vec3 &t) {
-    is >> t.e[0] >> t.e[1] >> t.e[2];
+    if(abs(t.e[0])<65504||abs(t.e[1])<65504||abs(t.e[2])<65504){//notera vänt tecken
+      is >> t.e[0] >> t.e[1] >> t.e[2];
+    }
+
     return is;
 }
 
 inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
-    os << t.e[0] << " " << t.e[1] << " " << t.e[2];
+    if(abs(t.e[0])>65504||abs(t.e[1])>65504||abs(t.e[2])>65504){
+      os<<"00 00 00";
+    } else{    os << t.e[0] << " " << t.e[1] << " " << t.e[2];}
     return os;
 }
 
 __host__ __device__ inline void vec3::make_unit_vector() {
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
     e[0] *= k; e[1] *= k; e[2] *= k;
 }
 
 __host__ __device__ inline vec3 operator+(const vec3 &v1, const vec3 &v2) {
-    return vec3(v1.e[0] + v2.e[0], v1.e[1] + v2.e[1], v1.e[2] + v2.e[2]);
+    vec3 e = vec3(v1.e[0] + v2.e[0], v1.e[1] + v2.e[1], v1.e[2] + v2.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator-(const vec3 &v1, const vec3 &v2) {
-    return vec3(v1.e[0] - v2.e[0], v1.e[1] - v2.e[1], v1.e[2] - v2.e[2]);
+    vec3 e = vec3(v1.e[0] - v2.e[0], v1.e[1] - v2.e[1], v1.e[2] - v2.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator*(const vec3 &v1, const vec3 &v2) {
-    return vec3(v1.e[0] * v2.e[0], v1.e[1] * v2.e[1], v1.e[2] * v2.e[2]);
+    vec3 e = vec3(v1.e[0] * v2.e[0], v1.e[1] * v2.e[1], v1.e[2] * v2.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator/(const vec3 &v1, const vec3 &v2) {
-    return vec3(v1.e[0] / v2.e[0], v1.e[1] / v2.e[1], v1.e[2] / v2.e[2]);
+    vec3 e = vec3(v1.e[0] / v2.e[0], v1.e[1] / v2.e[1], v1.e[2] / v2.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator*(dataType t, const vec3 &v) {
-    return vec3(t*v.e[0], t*v.e[1], t*v.e[2]);
+    vec3 e = vec3(t*v.e[0], t*v.e[1], t*v.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator/(vec3 v, dataType t) {
-    return vec3(v.e[0]/t, v.e[1]/t, v.e[2]/t);
+    vec3 e = vec3(v.e[0]/t, v.e[1]/t, v.e[2]/t);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 operator*(const vec3 &v, dataType t) {
-    return vec3(t*v.e[0], t*v.e[1], t*v.e[2]);
+    vec3 e = vec3(t*v.e[0], t*v.e[1], t*v.e[2]);
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 __host__ __device__ inline dataType dot(const vec3 &v1, const vec3 &v2) {
-    return v1.e[0] *v2.e[0] + v1.e[1] *v2.e[1]  + v1.e[2] *v2.e[2];
+    dataType e = v1.e[0] *v2.e[0] + v1.e[1] *v2.e[1]  + v1.e[2] *v2.e[2];
+    if(abs(e)>65504){
+      e= 0.0f;
+    }
+    return e;
 }
 
 __host__ __device__ inline vec3 cross(const vec3 &v1, const vec3 &v2) {
-    return vec3( (v1.e[1]*v2.e[2] - v1.e[2]*v2.e[1]),
+    vec3 e = vec3( (v1.e[1]*v2.e[2] - v1.e[2]*v2.e[1]),
                 (-(v1.e[0]*v2.e[2] - v1.e[2]*v2.e[0])),
                 (v1.e[0]*v2.e[1] - v1.e[1]*v2.e[0]));
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
+    return e;
 }
 
 
@@ -100,6 +144,9 @@ __host__ __device__ inline vec3& vec3::operator+=(const vec3 &v){
     e[0]  += v.e[0];
     e[1]  += v.e[1];
     e[2]  += v.e[2];
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
@@ -107,6 +154,9 @@ __host__ __device__ inline vec3& vec3::operator*=(const vec3 &v){
     e[0]  *= v.e[0];
     e[1]  *= v.e[1];
     e[2]  *= v.e[2];
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
@@ -114,6 +164,9 @@ __host__ __device__ inline vec3& vec3::operator/=(const vec3 &v){
     e[0]  /= v.e[0];
     e[1]  /= v.e[1];
     e[2]  /= v.e[2];
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
@@ -121,6 +174,9 @@ __host__ __device__ inline vec3& vec3::operator-=(const vec3& v) {
     e[0]  -= v.e[0];
     e[1]  -= v.e[1];
     e[2]  -= v.e[2];
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
@@ -128,6 +184,9 @@ __host__ __device__ inline vec3& vec3::operator*=(const dataType t) {
     e[0]  *= t;
     e[1]  *= t;
     e[2]  *= t;
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
@@ -137,6 +196,9 @@ __host__ __device__ inline vec3& vec3::operator/=(const dataType t) {
     e[0]  *= k;
     e[1]  *= k;
     e[2]  *= k;
+    if(abs(e[0])>65504||abs(e[1])>65504||abs(e[2])>65504){
+      vec3 e= vec3(0,0,0);
+    }
     return *this;
 }
 
