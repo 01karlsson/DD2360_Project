@@ -36,7 +36,7 @@ public:
     __host__ __device__ inline vec3& operator/=(const __nv_bfloat16 t);
 
     __host__ inline __nv_bfloat16 length() const {
-        return __float2bfloat16(sqrt(__low2float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2])));
+        return __float2bfloat16(sqrt(__bfloat162float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2])));
     }
 
     __device__ inline __nv_bfloat16 lengthd() const {
@@ -63,9 +63,9 @@ inline std::istream& operator>>(std::istream &is, vec3 &t) {
 }
 
 inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
-    os << __low2float(t.e[0]) << " "
-       << __low2float(t.e[1]) << " "
-       << __low2float(t.e[2]);
+    os << __bfloat162float(t.e[0]) << " "
+       << __bfloat162float(t.e[1]) << " "
+       << __bfloat162float(t.e[2]);
     return os;
 }
 
@@ -77,7 +77,7 @@ __device__ inline void vec3::make_unit_vectord() {
 }
 
 __host__ inline void vec3::make_unit_vectorh() {
-    float len = sqrt(__low2float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]));
+    float len = sqrt(__bfloat162float(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]));
     __nv_bfloat16 k = __float2bfloat16(1.0f / len);
     e[0] = __hmul(e[0], k);
     e[1] = __hmul(e[1], k);
@@ -294,7 +294,7 @@ __host__ __device__ inline __nv_bfloat16 hsqrt_wrapper(__nv_bfloat16 x) {
 #ifdef __CUDA_ARCH__
     return hsqrt(x);
 #else
-    return __float2bfloat16(sqrt(__low2float(x)));
+    return __float2bfloat16(sqrt(__bfloat162float(x)));
 #endif
 }
 
