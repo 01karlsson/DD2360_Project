@@ -44,7 +44,7 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
         }
         else {
             vec3 unit_direction = unit_vectord(cur_ray.direction());
-            __half t = 0.5f * (unit_direction.y() + __float2half(1.0f));
+            __nv_bfloat16 t = 0.5f * (unit_direction.y() + __float2bfloat16(1.0f));
             vec3 c = (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
             return cur_attenuation * c;
         }
@@ -207,9 +207,9 @@ int main(int argc, char *argv[]) {
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j*nx + i;
-            int ir = int(255.99f * __half2float(fb[pixel_index].r()));
-            int ig = int(255.99f * __half2float(fb[pixel_index].g()));
-            int ib = int(255.99f * __half2float(fb[pixel_index].b()));
+            int ir = int(255.99f * __bfloat162float(fb[pixel_index].r()));
+            int ig = int(255.99f * __bfloat162float(fb[pixel_index].g()));
+            int ib = int(255.99f * __bfloat162float(fb[pixel_index].b()));
             std::cout << ir << " " << ig << " " << ib << "\n";
         }
     }

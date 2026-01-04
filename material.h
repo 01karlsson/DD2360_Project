@@ -14,10 +14,10 @@ __device__ float schlick(float cosine, float ref_idx) {
 
 __device__ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted) {
     vec3 uv = unit_vectord(v);
-    __half dt = dot(uv, n);
-    float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1.0f - __half2float(dt * dt));
+    __nv_bfloat16 dt = dot(uv, n);
+    float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1.0f - __bfloat162float(dt * dt));
     if (discriminant > 0.0f) {
-        refracted = ni_over_nt * (uv - __half2float(dt) * n) - sqrtf(discriminant) * n;
+        refracted = ni_over_nt * (uv - __bfloat162float(dt) * n) - sqrtf(discriminant) * n;
         return true;
     }
     else
@@ -30,7 +30,7 @@ __device__ vec3 random_in_unit_sphere(curandState *local_rand_state) {
     vec3 p;
     do {
         p = 2.0f * RANDVEC3 - vec3(1,1,1);
-    } while (p.squared_length() >= __float2half(1.0f));
+    } while (p.squared_length() >= __float2bfloat16(1.0f));
     return p;
 }
 
@@ -59,17 +59,17 @@ class lambertian : public material {
 class metal : public material {
     public:
         __device__ metal(const vec3& a, float f) : albedo(a) {
-            if (f < 1.0f) fuzz = __float2half(f);
-            else fuzz = __float2half(1.0f);
+            if (f < 1.0f) fuzz = __float2bfloat16(f);
+            else fuzz = __float2bfloat16(1.0f);
         }
         __device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState *local_rand_state) const  {
             vec3 reflected = reflect(unit_vectord(r_in.direction()), rec.normal);
             scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(local_rand_state));
             attenuation = albedo;
-            return (dot(scattered.direction(), rec.normal) > __float2half(0.0f));
+            return (dot(scattered.direction(), rec.normal) > __float2bfloat16(0.0f));
         }
         vec3 albedo;
-        __half fuzz;
+        __nv_bfloat16 fuzz;
 };
 
 class dielectric : public material {
@@ -88,18 +88,18 @@ public:
         float reflect_prob;
         float cosine;
 
-        __half dot_prod = dot(r_in.direction(), rec.normal);
-        __half dir_length = r_in.direction().lengthd();
-        if (dot_prod > __float2half(0.0f)) {
+        __nv_bfloat16 dot_prod = dot(r_in.direction(), rec.normal);
+        __nv_bfloat16 dir_length = r_in.direction().lengthd();
+        if (dot_prod > __float2bfloat16(0.0f)) {
             outward_normal = -rec.normal;
             ni_over_nt = ref_idx;
-            cosine = __half2float(dot_prod) / __half2float(dir_length);
+            cosine = __bfloat162float(dot_prod) / __bfloat162float(dir_length);
             cosine = sqrt(1.0f - ref_idx * ref_idx * (1.0f - cosine * cosine));
         }
         else {
             outward_normal = rec.normal;
             ni_over_nt = 1.0f / ref_idx;
-            cosine = -__half2float(dot_prod) / __half2float(dir_length);
+            cosine = -__bfloat162float(dot_prod) / __bfloat162float(dir_length);
         }
 
         if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted))
