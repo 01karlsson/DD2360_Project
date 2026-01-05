@@ -148,14 +148,16 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 int main(int argc, char *argv[]) {
     int nx = 900;
     int ny = 600;
-    if(argc==3 && atoi(argv[1]) && atoi(argv[2])){
+    int print = 1;
+    if(argc==4 && atoi(argv[1]) && atoi(argv[2])){
       nx = atoi(argv[1]);
       ny = atoi(argv[2]);
+      print = atoi(argv[3]);
     }
     
-    int ns = 10;
-    int tx = 8;
-    int ty = 8;
+    int ns = 4;
+    int tx = 16;
+    int ty = 32;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
@@ -206,14 +208,16 @@ int main(int argc, char *argv[]) {
     std::cerr << "took " << timer_seconds << " seconds.\n";
 
     // Output FB as Image
-    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
-    for (int j = ny-1; j >= 0; j--) {
-        for (int i = 0; i < nx; i++) {
-            size_t pixel_index = j*nx + i;
-            int ir = int(255.99*fb[pixel_index].r());
-            int ig = int(255.99*fb[pixel_index].g());
-            int ib = int(255.99*fb[pixel_index].b());
-            std::cout << ir << " " << ig << " " << ib << "\n";
+    if (print) {
+        std::cout << "P3\n" << nx << " " << ny << "\n255\n";
+        for (int j = ny-1; j >= 0; j--) {
+            for (int i = 0; i < nx; i++) {
+                size_t pixel_index = j*nx + i;
+                int ir = int(255.99*fb[pixel_index].r());
+                int ig = int(255.99*fb[pixel_index].g());
+                int ib = int(255.99*fb[pixel_index].b());
+                std::cout << ir << " " << ig << " " << ib << "\n";
+            }
         }
     }
 
