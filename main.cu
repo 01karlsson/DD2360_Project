@@ -153,9 +153,9 @@ int main(int argc, char *argv[]) {
       ny = atoi(argv[2]);
     }
     
-    int ns = 10;
-    int tx = 8;
-    int ty = 8;
+    int ns = 4;
+    int tx = 16;
+    int ty = 32;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
