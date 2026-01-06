@@ -46,6 +46,9 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
             vec3 unit_direction = unit_vector(cur_ray.direction());
             float t = 0.5f*(unit_direction.y() + 1.0f);
             vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            if(t<0.47f){
+              c= vec3(0.2,0.2,0.2);
+            }
             return cur_attenuation * c;
         }
     }
@@ -96,8 +99,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
-        d_list[0] = new sphere(vec3(0,-1000.0,-1), 1000,
-                               new lambertian(vec3(0.5, 0.5, 0.5)));
+        d_list[0] = new sphere(vec3(0.0f,-0.0f,0.0f), 0.0f,new lambertian(vec3(0.4f, 0.4f, 0.4f)));
         int i = 1;
         for(int a = -11; a < 11; a++) {
             for(int b = -11; b < 11; b++) {
@@ -116,9 +118,11 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
                 }
             }
         }
+
         d_list[i++] = new sphere(vec3(0, 1,0),  1.0, new dielectric(1.5));
         d_list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
         d_list[i++] = new sphere(vec3(4, 1, 0),  1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        
         *rand_state = local_rand_state;
         *d_world  = new hitable_list(d_list, 22*22+1+3);
 
@@ -148,14 +152,16 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 int main(int argc, char *argv[]) {
     int nx = 900;
     int ny = 600;
-    if(argc==3 && atoi(argv[1]) && atoi(argv[2])){
+    int ns = 4;
+
+    if(argc==4 && atoi(argv[1]) && atoi(argv[2])){
       nx = atoi(argv[1]);
       ny = atoi(argv[2]);
+      ns = atoi(argv[3]);
     }
     
-    int ns = 4;
-    int tx = 16;
-    int ty = 32;
+    int tx = 32;
+    int ty = 16;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
