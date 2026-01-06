@@ -28,7 +28,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 // depth of 50, so we adapt this a few chapters early on the GPU.
 __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_state) {
     ray cur_ray = r;
-    vec3 cur_attenuation = vec3(1.0f, 1.0f, 1.0f);
+    vec3 cur_attenuation = vec3(1.0,1.0,1.0);
     for(int i = 0; i < 50; i++) {
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
@@ -39,17 +39,20 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
                 cur_ray = scattered;
             }
             else {
-                return vec3(0.0f, 0.0f, 0.0f);
+                return vec3(0.0,0.0,0.0);
             }
         }
         else {
-            vec3 unit_direction = unit_vectord(cur_ray.direction());
-            __half t = 0.5f * (unit_direction.y() + __float2half(1.0f));
-            vec3 c = (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
+            vec3 unit_direction = unit_vector(cur_ray.direction());
+            float t = 0.5f*(unit_direction.y() + 1.0f);
+            vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            if(t<0.47f){
+              c= vec3(0.35f,0.42f,0.49f);
+            }
             return cur_attenuation * c;
         }
     }
-    return vec3(0.0f, 0.0f, 0.0f); // exceeded recursion
+    return vec3(0.0,0.0,0.0); // exceeded recursion
 }
 
 __global__ void rand_init(curandState *rand_state) {
