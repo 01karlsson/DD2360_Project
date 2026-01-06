@@ -47,7 +47,7 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_sta
             float t = 0.5f*(unit_direction.y() + 1.0f);
             vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
             if(t<0.47f){
-              c= vec3(0.2,0.2,0.2);
+              c= vec3(0.35f,0.42f,0.49f);
             }
             return cur_attenuation * c;
         }
@@ -152,7 +152,7 @@ __global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camer
 int main(int argc, char *argv[]) {
     int nx = 900;
     int ny = 600;
-    int ns = 4;
+    int ns = 3;
 
     if(argc==4 && atoi(argv[1]) && atoi(argv[2])){
       nx = atoi(argv[1]);
