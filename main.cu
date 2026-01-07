@@ -88,9 +88,9 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     }
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    col[0] = col[0] * rsqrtf(col[0]);
-    col[1] = col[1] * rsqrtf(col[1]);
-    col[2] = col[2] * rsqrtf(col[2]);
+    col[0] *= rsqrtf(col[0]);
+    col[1] *= rsqrtf(col[1]);
+    col[2] *= rsqrtf(col[2]);
     fb[pixel_index] = col;
 }
 
@@ -160,8 +160,8 @@ int main(int argc, char *argv[]) {
       ns = atoi(argv[3]);
     }
     
-    int tx = 32;
-    int ty = 16;
+    int tx = 16;
+    int ty = 32;
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
