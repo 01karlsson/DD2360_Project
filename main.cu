@@ -29,7 +29,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 __device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = vec3(1.0,1.0,1.0);
-    for(int i = 0; i < 50; i++) {
+    for(int i = 0; i < 10; i++) {
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
             ray scattered;
@@ -81,16 +81,16 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     curandState local_rand_state = rand_state[pixel_index];
     vec3 col(0,0,0);
     for(int s=0; s < ns; s++) {
-        float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
-        float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
+        float u = __fdividef(float(i + curand_uniform(&local_rand_state)) , float(max_x));
+        float v = __fdividef(float(j + curand_uniform(&local_rand_state)) , float(max_y));
         ray r = (*cam)->get_ray(u, v, &local_rand_state);
         col += color(r, world, &local_rand_state);
     }
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    col[0] = sqrt(col[0]);
-    col[1] = sqrt(col[1]);
-    col[2] = sqrt(col[2]);
+    col[0] = col[0] * rsqrtf(col[0]);
+    col[1] = col[1] * rsqrtf(col[1]);
+    col[2] = col[2] * rsqrtf(col[2]);
     fb[pixel_index] = col;
 }
 
@@ -216,9 +216,9 @@ int main(int argc, char *argv[]) {
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j*nx + i;
-            int ir = int(255.99*fb[pixel_index].r());
-            int ig = int(255.99*fb[pixel_index].g());
-            int ib = int(255.99*fb[pixel_index].b());
+            int ir = int(uint8_t(255.99*fb[pixel_index].r()));
+            int ig = int(uint8_t(255.99*fb[pixel_index].g()));
+            int ib = int(uint8_t(255.99*fb[pixel_index].b()));
             std::cout << ir << " " << ig << " " << ib << "\n";
         }
     }
